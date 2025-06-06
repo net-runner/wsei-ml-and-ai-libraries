@@ -1,0 +1,84 @@
+# Python
+# Compiled Python files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python/
+*/__pycache__
+# Distribution / packaging
+.Python
+env/
+venv/
+lib/
+include/
+bin/
+pip-log.txt
+pip-delete-this-arg.txt
+
+# Editors
+.vscode/        # VS Code
+.idea/          # IntelliJ IDEA / PyCharm
+.DS_Store       # macOS
+*.sublime-project # Sublime Text projects
+*.sublime-workspace # Sublime Text workspaces
+
+# OS generated files
+.DS_Store
+.localized
+Thumbs.db
+ehthumbs.db
+*.bak
+*.swp
+*~
+._*
+
+# Jupyter Notebook specific exclusions
+.ipynb_checkpoints/ # Jupyter auto-saves checkpoints
+*.ipynb           # Exclude all .ipynb files if you don't want to track them.
+                  # If you DO want to track some .ipynb files, uncomment the line below
+                  # and then explicitly track them using `git add -f path/to/your/notebook.ipynb`.
+                  # A better approach for tracking notebooks while ignoring outputs is often
+                  # to use `nbstripoutput` or a similar tool.
+
+# For notebooks you *do* want to track, but want to ignore their output:
+# You can use tools like `nbstripoutput` or `git-lfs` for large outputs.
+# If you run `nbstripoutput --install` it will set up a git filter that
+# cleans outputs before committing. In that case, you don't need to ignore
+# the .ipynb files themselves.
+
+# If you prefer to manually strip outputs before committing:
+# Find and replace "outputs": [] with an empty list in your .ipynb JSON.
+
+# Virtual environment
+# This is a common place for virtual environments. Adjust if yours is elsewhere.
+.venv/
+venv/
+env/
+
+# Database files
+*.db
+*.sqlite3
+
+# Logs
+*.log
+logs/
+
+# Testing
+.pytest_cache/
+.coverage
+
+# Miscellaneous
+.env                # Environment variables
+.env.*
+.flaskenv
+*.seed
+*.pem
+*.key
+*.csr
+*.crt
+*.conf
+*.ini
+*.json            # Exclude JSON files that might contain sensitive data or large outputs
+                  # If you have non-sensitive JSON config files you want to track,
+                  # you can explicitly `git add -f` them or make more specific rules.
