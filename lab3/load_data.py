@@ -8,7 +8,7 @@ def load_league_info():
     df = pd.read_csv('../data/LeagueData.csv')
     df['Release Date'] = pd.to_datetime(df['Release Date'])
     df['End Date'] = pd.to_datetime(df['End Date'])
-    df['league'] = df['Challenge League'].str.replace(' league', '', regex=False)
+    df['league'] = df['League'].str.replace(' league', '', regex=False)
     df.set_index('league', inplace=True)
     return df
 
@@ -19,12 +19,8 @@ def load_data():
         "Crucible": "Crucible.currency.csv",
         "Affliction": "Affliction.currency.csv",
         "Necropolis": "Necropolis.currency.csv",
-        "Expedition": "Expedition.currency.csv",
         "Kalandra": "Kalandra.currency.csv",
         "Sanctum": "Sanctum.currency.csv",
-        "Scourge": "Scourge.currency.csv",
-        "Sentinel": "Sentinel.currency.csv",
-        "Ultimatum": "Ultimatum.currency.csv",
     }
     all_data = []
     files_found = True
