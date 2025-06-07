@@ -1,0 +1,196 @@
+# Zadanie
+
+Celem zadanie jest przetworzenie medycznych obrazów histopatologicznych oraz
+wytrenowanie prostej konwolucyjnej sieci neuronowej (CNN), która posłuży jako model
+bazowy do wykrywania nowotworów..
+
+Użyj gpu.
+Uruchom poniższy kod, aby zaimportować biblioteki oraz klasę do ładowania zbioru danych
+PCam.
+
+
+import torch
+import pandas as pd
+from PIL import Image
+from torch.utils.data import Dataset
+torch.manual_seed(42)
+
+
+class PCamDataset(Dataset):
+"""
+Custom Dataset for loading the microscopic histopathology images within the PCam dataset
+"""
+def __init__(self, csv_file, transform=None, num_samples=None):
+"""
+Args:
+csv_file (string): Path to the csv file with annotations
+transform (callable, optional): Optional transform to be applied on a sample
+num_samples (int, optional): Number of samples to load. If None, loads all samples
+"""
+self.annotations = pd.read_csv(csv_file)
+if num_samples is not None:
+self.annotations = self.annotations.head(num_samples)
+self.transform = transform
+def __len__(self):
+return len(self.annotations)
+def __getitem__(self, idx):
+if torch.is_tensor(idx):
+idx = idx.tolist()
+img_path = self.annotations.iloc[idx, 0]
+label = self.annotations.iloc[idx, 1]
+image = Image.open(img_path)
+if image.mode != 'RGB':
+image = image.convert('RGB')
+if self.transform:
+image = self.transform(image)
+label = torch.tensor(label, dtype=torch.float)
+return image, label
+
+
+Zad 1
+Użyj transforms.Compose([]) do stworzenia pipeline przetwarzania wstępnego obrazów, aby
+zastosować następujące transformacje oraz augmentacje do zbioru treningowego:
+- zmiana rozmiaru obrazów na 96x96 pikseli
+- losowe odwracanie obrazów w poziomie
+- losowe obracanie obrazów o 15 stopni zgodnie lub przeciwnie do ruchu wskazówek zegara
+- dostosowanie jasności i kontrastu w zakresie 20% (lub 0.20)
+- konwersja typu danych obrazu na tensor PyTorch z wartościami w zakresie [0.0, 1.0]
+- normalizacja wartości pikseli w 3 kanałach kolorów, tak aby miały średnią 0.5 i odchylenie
+standardowe 0.5
+Zapisz pipeline przetwarzania wstępnego dla zbioru treningowego do zmiennej train_transform.
+
+Zad 2
+Następnie załaduj zbiór treningowy PCam, stosując pipeline transformacji treningowych do
+każdego obrazu za pomocą niestandardowej klasy PCamDataset z następującymi parametrami:
+- csv_file aby określić zbiór treningowy znajdujący się w ścieżce z danymi
+(data/train_labels.csv). Plik z danymi znajduje się w data.zip w folderze laboratorium na
+Teams.
+- transform aby zastosować pipeline przetwarzania wstępnego train_transform
+Zapisz zbiór treningowy PCam do zmiennej train_dataset.
+
+Zad 3
+Stwórz iterowalny obiekt za pomocą klasy DataLoader z PyTorch, który pozwoli na ładowanie
+obrazów ze zbioru treningowego w partiach podczas treningu:
+- ustaw ładowanie 8 obrazów treningowych na partię
+- pamiętaj o przetasowaniu obrazów treningowych
+- Zapisz iterowalny obiekt dataloadera do zmiennej train_dataloader.
+
+Zad 4
+Następnie załaduj i przetwórz wstępnie zbiory walidacyjny i testowy PCam.
+Stwórz pipeline przetwarzania wstępnego obrazów za pomocą klasy transforms.Compose([]) z
+biblioteki torchvision, który zastosuje następujące transformacje do zbioru testowego:
+- zmiana rozmiaru obrazów na 96x96 pikseli
+- konwersja typu danych obrazu na tensor PyTorch z wartościami w zakresie [0.0, 1.0]
+- normalizacja wartości pikseli w 3 kanałach kolorów, tak aby miały średnią 0.5 i odchylenie
+standardowe 0.5
+Zapisz pipeline przetwarzania wstępnego dla zbioru walidacyjnego/testowego do zmiennej
+val_test_transform.
+
+Zad 5
+Następnie załaduj zbiór walidacyjny PCam, stosując potok przetwarzania wstępnego dla zbioru
+walidacyjnego/testowego:
+- csv_file aby określić zbiór walidacyjny znajdujący się w ścieżce 'data/validation_labels.csv'
+- transform aby zastosować potok przetwarzania wstępnego val_test_transform
+- Zapisz załadowany zbiór walidacyjny do zmiennej val_dataset.
+Na koniec stwórz iterowalny obiekt za pomocą klasy narzędziowej DataLoader z PyTorch, który
+pozwoli na ładowanie obrazów ze zbioru walidacyjnego w partiach podczas ewaluacji:
+- ustaw ładowanie 32 obrazów na batch
+- pamiętaj, aby nie tasować obrazów
+Zapisz iterowalny obiekt dataloadera do zmiennej val_dataloader.
+Zrób to samo dla zbioru testowego i zapisz do zmiennej test_dataloader.
+Zad 6
+Stwórz teraz architekturę CNN jako klasę o nazwie SimpleCNN używając nn.Module.
+Zdefiniuj metodę __init__ z następującymi warstwami CNN:
+- self.conv1 to pierwsza warstwa konwolucyjna z 3 kanałami wejściowymi, 32 kanałami
+wyjściowymi, rozmiarem filtra 3x3 i dopełnieniem (padding) 1
+- self.conv2 to druga warstwa konwolucyjna z 32 kanałami wejściowymi, 64 kanałami
+wyjściowymi, rozmiarem filtra 3x3 i dopełnieniem 1
+- self.conv3 to trzecia warstwa konwolucyjna z 64 kanałami wejściowymi, 128 kanałami
+wyjściowymi, rozmiarem filtra 3x3 i dopełnieniem 1
+- self.fc1 to pierwsza warstwa w pełni połączona z 18432 węzłami wejściowymi i 256 węzłami
+wyjściowymi 18432 odpowiada długości spłaszczonego wektora 1-D po ostatniej warstwie
+max pooling (128 x 12 x 12 = 18432)
+- self.fc2 to druga warstwa w pełni połączona z 256 węzłami wejściowymi i 1 węzłem
+wyjściowym
+Zdefiniuj metodę forward, która przetwarza każdy obraz x z operacjami w następującej kolejności:
+- Przepuść obraz przez pierwszą warstwę konwolucyjną, a następnie zastosuj funkcję
+aktywacji ReLU
+- Przepuść pierwszy aktywowany wynik splotu przez warstwę max pooling z filtrem 2x2
+- Przepuść pierwszy wynik max pooling przez drugą warstwę konwolucyjną, a następnie
+zastosuj funkcję aktywacji ReLU
+- Przepuść drugi aktywowany wynik splotu przez drugą warstwę max pooling z filtrem 2x2
+- Przepuść drugi wynik max pooling przez trzecią warstwę konwolucyjną, a następnie zastosuj
+funkcję aktywacji ReLU
+- Przepuść trzeci aktywowany wynik splotu przez trzecią warstwę max pooling z filtrem 2x2
+- Spłaszcz trzeci wynik max pooling do tensora (z rozmiarem partii)
+- Przepuść spłaszczony tensor przez pierwszą warstwę w pełni połączoną, a następnie
+zastosuj funkcję aktywacji ReLU
+- Przepuść aktywowany wynik przez drugą warstwę w pełni połączoną za pomocą funkcji
+aktywacji Sigmoid Wskazówka: Użyj x = torch.sigmoid(self.fc2(x)).squeeze(1)
+
+Zwróć wynik aktywowany funkcją Sigmoid. Stwórz instancję klasy modelu CNN i zapisz ją do
+zmiennej cnn_model.
+
+
+Zad 7
+Ustaw urządzenie sprzętowe CNN na GPU/CPU. Stwórz zmienną device, która wykrywa, czy
+dostępne jest GPU ('cuda') czy CPU.
+- użyj torch.device() do wykrycia urządzenia
+- użyj torch.cuda.is_available() do sprawdzenia, czy GPU jest dostępne; jeśli GPU jest
+dostępne, zwróć ciąg znaków 'cuda'; jeśli nie, zwróć ciąg znaków 'cpu'
+Przenieś cnn_model na dostępne urządzenie.
+
+
+Zad 8
+Zainicjalizuj funkcję straty i optymalizator do treningu, używając modułu torch.optim.
+Stwórz instancję funkcji straty binarnej entropii krzyżowej nn.BCELoss() w PyTorch i zapisz ją do
+zmiennej criterion.
+Stwórz instancję optymalizatora Adam w PyTorch ze współczynnikiem uczenia 0.0005 i zapisz ją
+do zmiennej optimizer.
+
+Zad 9
+Stwórz pętlę treningową, która:
+- trenuje model CNN na zbiorze treningowym i śledzi stratę treningową
+- śledzi stratę walidacyjną na zbiorze treningowym
+Zainicjalizuj następujące puste listy do śledzenia strat treningowych i walidacyjnych na epokę:
+- train_losses do śledzenia straty treningowej
+- val_losses do śledzenia straty walidacyjnej
+Trenuj CNN przez 5 epok, przypisując wartość 5 do zmiennej num_epochs.
+Zainicjalizuj następujące zmienne wartością 0 do śledzenia podczas treningu:
+- total_train_loss do śledzenia całkowitej straty treningowej
+- total_val_loss do śledzenia całkowitej straty walidacyjnej
+Zbuduj sekcję treningową:
+- iteruj przez obrazy i etykiety partii treningowych
+- w każdej partii treningowej: umieść obrazy na urządzeniu GPU, zresetuj gradienty do zera,
+przepuść partię przez przejście w przód (forward pass) CNN, oblicz stratę treningową,
+wykonaj propagację wsteczną straty, dostosuj wagi i biasy, zaktualizuj całkowitą stratę
+treningową
+W sekcji walidacyjnej oceń wydajność zbioru walidacyjnego:
+- iteruj przez obrazy i etykiety partii walidacyjnych
+- w każdej partii walidacyjnej: umieść obrazy na urządzeniu GPU, przepuść partię przez
+przejście w przód (forward pass) CNN, oblicz stratę walidacyjną, zaktualizuj całkowitą stratę
+walidacyjną
+Wizualizuj straty treningowe i walidacyjne podczas treningu.
+
+Zad 10
+Następnie użyj wytrenowanego CNN z cnn_model, do generowania predykcji (etykiet i
+prawdopodobieństw) na obrazach ze zbioru testowego.
+Ponieważ używamy binarnej straty entropii krzyżowej, wyniki z przejścia w przód (forward pass) są
+już przekonwertowane na prawdopodobieństwa (dzięki PyTorch).
+Stwórz puste listy dla zmiennych test_pred_probs i test_pred_labels do zapisywania
+przewidywanych prawdopodobieństw i etykiet.
+W instrukcji torch.no_grad():
+- iteruj przez obrazy i etykiety testowe w iterowalnym obiekcie dataloadera testowego
+- przepuść obrazy przez przejście w przód (forward pass) CNN, aby wygenerować wyniki
+(prawdopodobieństwa)
+- dodaj prawdopodobieństwa do listy test_pred_probs - Użyj
+test_pred_probs.extend(outputs.cpu().numpy())
+- użyj funkcji torch.round(), aby zaokrąglić prawdopodobieństwa do ich przewidywanych
+etykiet - prawdopodobieństwa >.50 otrzymują etykietę 1, w przeciwnym razie etykietę 0
+- dodaj przewidywane etykiety do listy test_pred_labels - Użyj
+test_pred_labels.extend(pred_labels.cpu().numpy())
+Przekonwertuj test_pred_probs i test_pred_labels na tablice NumPy.
+
+
+Zad 11
+Oceń wytrenowany CNN.
